@@ -1,5 +1,5 @@
 
-public class CST338_ASS6_CardGameMVC
+public class CardGameMVC
 {
    public static void main(String[] args)
    {
