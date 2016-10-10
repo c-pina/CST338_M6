@@ -1,8 +1,11 @@
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class CardTableView extends JFrame {
    
@@ -11,8 +14,7 @@ public class CardTableView extends JFrame {
     */
    private static final long serialVersionUID = 1L;
    public JPanel pnlComputerHand, pnlHumanHand, pnlPlayArea, pnlGameStatus, pnlHumanPot;
-   
-
+   public JButton timerButton;
 
    CardTableView(CardTableModel tableModel)
    {
@@ -111,4 +113,41 @@ public class CardTableView extends JFrame {
       label.add(button, JLabel.CENTER);
    }
    
+   public void addTimerButton(GameTimerEvent ie)
+   {
+      this.timerButton = new JButton("0:00");
+      this.timerButton.setName("timerButton");
+      this.timerButton.addActionListener(new ActionListener() 
+      {
+         public void actionPerformed(ActionEvent e) 
+         {
+            ie.gameTimerEventToggle();
+         }          
+      });
+      pnlHumanHand.add(this.timerButton, JLabel.CENTER);
+   }  
+
+   public void updateTimerWithString(String string)
+   {
+      this.timerButton.setText(string);
+   }
+   public void updateTimerWithValueInSeconds(int seconds)
+   {
+      int minutes = (seconds % 3600) / 60;
+      int totalSeconds = seconds % 60;
+      String timeString = String.format("%02d:%02d", minutes, totalSeconds);
+      this.updateTimerWithString(timeString);
+   }
+
+   // removes human's hand, and leaves the timer intact
+   public void reloadHumansHand()
+   {
+      Component[] components = this.pnlHumanHand.getComponents();
+      for (Component component : components) {
+         if (component.getClass().equals(JLabel.class) && component.getName() != "timerButton") 
+         {
+            this.pnlHumanHand.remove(component);
+         }
+      }
+   }
 }

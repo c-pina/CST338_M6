@@ -2,7 +2,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.*;
 
-public class CardTableController
+public class CardTableController implements GameTimerEvent
 {
    
    static int NUM_CARDS_PER_HAND = 7;
@@ -12,7 +12,10 @@ public class CardTableController
    CardGameFramework highCardGame;
    CardTableModel myCardTableModel;
    CardTableView myCardTableView;
-   
+   GameTimer gameTimer;
+   int elapsedGameTime = 0;
+   Boolean gamePaused = false;
+
    public void startGame()
    {
       int numPacksPerDeck = 1;
@@ -24,6 +27,9 @@ public class CardTableController
       this.myCardTableModel = new CardTableModel(NUM_CARDS_PER_HAND, NUM_PLAYERS, "High Card");
       this.myCardTableView = new CardTableView(myCardTableModel);
       
+      this.myCardTableView.addTimerButton(this);
+      this.addGameTimer();
+
       this.highCardGame = new CardGameFramework(
             numPacksPerDeck, 
             numJokersPerPack,  
@@ -134,9 +140,9 @@ public class CardTableController
     
    public void reloadHumanHand()
    {      
-      // remove all the cards from the player's hand
-      this.myCardTableView.pnlHumanHand.removeAll();
-      
+      // remove all the cards from the player's hand, except for the timer
+      this.myCardTableView.reloadHumansHand();
+
       // clear out the labels array
       Hand hand = this.highCardGame.getHand(0);
       myCardTableModel.humanLabels = new JLabel[hand.getNumCards()];
@@ -175,5 +181,41 @@ public class CardTableController
 
       myCardTableView.displayButton(btn1, label);
       return label;
+   }
+
+   public void gameTimerEventTick(int seconds)
+   {
+      this.myCardTableView.updateTimerWithValueInSeconds(seconds);
+   } 
+
+   public void gameTimerEventToggle()
+   {
+      // pause the game
+      if (this.gamePaused == true)
+      {
+         this.gamePaused = false;
+         this.addGameTimer();
+      }
+      else
+      {
+         // resume the game
+         this.gamePaused = true;
+         this.elapsedGameTime += this.gameTimer.getGameTime();
+         this.gameTimer.stopTimer();
+         this.myCardTableView.updateTimerWithString("PAUSED");
+      }
+   }
+
+   private void addGameTimer()
+   {
+      if (this.gameTimer != null)
+      {
+         this.gameTimer.stopTimer();
+      }
+
+      this.gameTimer = new GameTimer(this);
+      this.gameTimer.start();
+      this.gameTimer.gameTime = this.elapsedGameTime;
+      this.elapsedGameTime = 0;
    }
 }
