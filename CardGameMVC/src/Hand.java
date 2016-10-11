@@ -41,9 +41,14 @@ class Hand {
       if (numCards > 0)
       {
          Card tempCard = myCards[index];
-         myCards[index] = null;
          numCards--;
 
+        for (int i = index; i < numCards; i++)
+         {
+           myCards[i] = myCards[i + 1];
+         }
+         
+        myCards[numCards] = null;
          return tempCard;
       }
       else
