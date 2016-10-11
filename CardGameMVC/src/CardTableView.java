@@ -13,7 +13,7 @@ public class CardTableView extends JFrame {
     * 
     */
    private static final long serialVersionUID = 1L;
-   public JPanel pnlComputerHand, pnlHumanHand, pnlPlayArea, pnlGameStatus, pnlHumanPot;
+   public JPanel pnlComputerHand, pnlHumanHand, pnlPlayArea, pnlGameStatus, pnlScoreBoard, pnlPassArea, pnlHumanArea;
    public JButton timerButton;
 
    CardTableView(CardTableModel tableModel)
@@ -40,7 +40,7 @@ public class CardTableView extends JFrame {
       gameStatusBorder.setTitleJustification(TitledBorder.LEFT);
       gameStatusBorder.setTitlePosition(TitledBorder.TOP);
       pnlGameStatus.setBorder(gameStatusBorder);
-      pnlGameStatus.setPreferredSize(new Dimension(160, 350));
+      pnlGameStatus.setPreferredSize(new Dimension(160, 320));
       this.add(pnlGameStatus, BorderLayout.WEST);
       
       pnlPlayArea = new JPanel();
@@ -49,26 +49,44 @@ public class CardTableView extends JFrame {
       playBorder.setTitleJustification(TitledBorder.LEFT);
       playBorder.setTitlePosition(TitledBorder.TOP);
       pnlPlayArea.setBorder(playBorder);
-      pnlPlayArea.setPreferredSize(new Dimension(140, 350));
+      pnlPlayArea.setPreferredSize(new Dimension(140, 320));
       this.add(pnlPlayArea, BorderLayout.CENTER);
       
-      pnlHumanPot = new JPanel();
-      pnlHumanPot.setLayout(new GridLayout(2, tableModel.getNumCardsPerHand()/2));
-      pnlHumanPot.setPreferredSize(new Dimension(500, 350));
-      TitledBorder humanPotBorder = new TitledBorder("Your Winnings");
+      pnlScoreBoard = new JPanel();
+      pnlScoreBoard.setLayout(new GridLayout(2, tableModel.getNumCardsPerHand()/2));
+      pnlScoreBoard.setPreferredSize(new Dimension(500, 320));
+      TitledBorder humanPotBorder = new TitledBorder("Score Board");
       humanPotBorder.setTitleJustification(TitledBorder.LEFT);
       humanPotBorder.setTitlePosition(TitledBorder.TOP);
-      pnlHumanPot.setBorder(humanPotBorder);
-      this.add(pnlHumanPot, BorderLayout.EAST);
+      pnlScoreBoard.setBorder(humanPotBorder);
+      this.add(pnlScoreBoard, BorderLayout.EAST);
+      
+      pnlHumanArea = new JPanel();
+      pnlHumanArea.setLayout(new BorderLayout());
+      TitledBorder humanAreaBorder = new TitledBorder("You");
+      humanAreaBorder.setTitleJustification(TitledBorder.LEFT);
+      humanAreaBorder.setTitlePosition(TitledBorder.TOP);
+      pnlHumanArea.setBorder(humanAreaBorder);
+      pnlHumanArea.setPreferredSize(new Dimension(750, 185));
+      this.add(pnlHumanArea, BorderLayout.SOUTH);
       
       pnlHumanHand = new JPanel();
       pnlHumanHand.setLayout(new GridLayout(1, tableModel.getNumCardsPerHand()));
-      TitledBorder humanBorder = new TitledBorder("You");
+      TitledBorder humanBorder = new TitledBorder("");
       humanBorder.setTitleJustification(TitledBorder.LEFT);
       humanBorder.setTitlePosition(TitledBorder.TOP);
       pnlHumanHand.setBorder(humanBorder);
       pnlHumanHand.setPreferredSize(new Dimension(750, 125));
-      this.add(pnlHumanHand, BorderLayout.SOUTH);
+      this.pnlHumanArea.add(pnlHumanHand, BorderLayout.NORTH);
+      
+      pnlPassArea = new JPanel();
+      pnlPassArea.setLayout(new GridLayout(1,2));
+      TitledBorder passBoarder = new TitledBorder("");
+      passBoarder.setTitleJustification(TitledBorder.LEFT);
+      passBoarder.setTitlePosition(TitledBorder.TOP);
+      pnlPassArea.setBorder(passBoarder);
+      pnlPassArea.setPreferredSize(new Dimension(750, 40));
+      this.pnlHumanArea.add(pnlPassArea, BorderLayout.SOUTH);
       
       this.setVisible(true);
    }
@@ -124,7 +142,7 @@ public class CardTableView extends JFrame {
             ie.gameTimerEventToggle();
          }          
       });
-      pnlHumanHand.add(this.timerButton, JLabel.CENTER);
+      pnlPassArea.add(this.timerButton, JLabel.CENTER);
    }  
 
    public void updateTimerWithString(String string)
@@ -150,4 +168,39 @@ public class CardTableView extends JFrame {
          }
       }
    }
+   //removes button so that the area can refresh
+   public void reloadPassArea()
+   {
+      Component[] components = this.pnlPassArea.getComponents();
+      for (Component component : components)
+      {
+         if (component.getClass().equals(JLabel.class) && component.getName() != "timerButton") 
+         {
+            this.pnlPassArea.remove(component);
+         }
+      }
+   }
+   //removes the current score so that it can be updated
+   public void clearScoreboard()
+   {
+      Component[] components = this.pnlScoreBoard.getComponents();
+      for (Component component : components)
+      {
+        this.pnlScoreBoard.remove(component);
+      }
+   }
+   //updates the scoreboard
+   public void updateScoreboard(int humanPass, int compPass)
+   {
+      String humanString = "Player: " + humanPass;
+      String cpuString = "CPU: " + compPass;
+      JLabel labelHuman = new JLabel(humanString, JLabel.CENTER);
+      JLabel labelCpu = new JLabel(cpuString, JLabel.CENTER);
+      this.pnlScoreBoard.add(labelCpu);
+      this.pnlScoreBoard.add(labelHuman);
+      
+  }
+   
 }
+
+   

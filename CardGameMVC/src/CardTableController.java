@@ -9,12 +9,14 @@ public class CardTableController implements GameTimerEvent
    static int  NUM_PLAYERS = 2;
 
    
-   CardGameFramework highCardGame;
+   CardGameFramework buildGame;
    CardTableModel myCardTableModel;
    CardTableView myCardTableView;
    GameTimer gameTimer;
    int elapsedGameTime = 0;
-   Boolean gamePaused = false;
+   Boolean gamePaused = false, selectTopStack = false, selectBottomStack = false, 
+         humanPass=false, computerPass=false;
+   
 
    public void startGame()
    {
@@ -22,15 +24,18 @@ public class CardTableController implements GameTimerEvent
       int numJokersPerPack = 0;
       int numUnusedCardsPerPack = 0;
       Card[] unusedCardsPerPack = null;    
-
+      String welcomeMessage = "Welcome to BUILD!\nJokers are 0 and\nAces are 1.\nYou go first.";
+      
       // establish main frame in which program will run
       this.myCardTableModel = new CardTableModel(NUM_CARDS_PER_HAND, NUM_PLAYERS, "High Card");
       this.myCardTableView = new CardTableView(myCardTableModel);
       
       this.myCardTableView.addTimerButton(this);
       this.addGameTimer();
+      this.myCardTableView.pnlPassArea.add(this.humanPass(), JLabel.CENTER);
+      this.myCardTableView.updateScoreboard(myCardTableModel.getHumanPass(), myCardTableModel.getCompPass());
 
-      this.highCardGame = new CardGameFramework(
+      this.buildGame = new CardGameFramework(
             numPacksPerDeck, 
             numJokersPerPack,  
             numUnusedCardsPerPack, 
@@ -38,7 +43,8 @@ public class CardTableController implements GameTimerEvent
             NUM_PLAYERS, 
             NUM_CARDS_PER_HAND);
 
-      this.highCardGame.deal();      
+      this.buildGame.deal();  
+      
 
       // CREATE LABELS ----------------------------------------------------
       for (int i = 0; i < myCardTableModel.getNumCardsPerHand(); i++)
@@ -47,7 +53,7 @@ public class CardTableController implements GameTimerEvent
          myCardTableModel.computerLabels[i] = computerLabel;
 
          // create the player label
-         Card playerCard = this.highCardGame.getHand(0).inspectCard(i);
+         Card playerCard = this.buildGame.getHand(0).inspectCard(i);
          JLabel playerLabel = this.labelForCard(playerCard, i);
          myCardTableModel.humanLabels[i] = playerLabel;
       }
@@ -59,64 +65,108 @@ public class CardTableController implements GameTimerEvent
          myCardTableView.displayLabel(myCardTableView.pnlHumanHand, myCardTableModel.humanLabels[j]);
       }
       
-      myCardTableView.displayTurnLabelForHuman(true, myCardTableModel.gameStatusText);
+      this.myCardTableModel.topStack = this.buildGame.getCardFromDeck();
+      this.myCardTableView.pnlPlayArea.add(this.labelForTopStack(myCardTableModel.topStack));
+      
+     
+      this.myCardTableModel.bottomStack = this.buildGame.getCardFromDeck();
+      this.myCardTableView.pnlPlayArea.add(this.labelForBottomStack(myCardTableModel.bottomStack));
+      
+      myCardTableView.displayTextOnLabel(welcomeMessage, myCardTableModel.gameStatusText);
+      //this.myCardTableView.displayTurnLabelForHuman(true, myCardTableModel.gameStatusText);
 
       // show everything to the user
       this.myCardTableView.setVisible(true);  
    }
    
    void handleAction(ActionEvent e)
-   {  
-      // get the tapped card from the human's hand and play it
-      int cardIndex = Integer.parseInt(e.getActionCommand());
-      myCardTableModel.lastPlayedHumanCard = this.highCardGame.playCard(0, cardIndex);
-      
-      // remove all cards from the playing area
-      this.myCardTableView.pnlPlayArea.removeAll();
-
-      // add card to the playing area
-      JLabel playedCardLabel = new JLabel(GUICard.getIcon(myCardTableModel.lastPlayedHumanCard));
-      this.myCardTableView.pnlPlayArea.add(playedCardLabel, JLabel.CENTER);
-      this.reloadHumanHand();
-      this.playComputerHand();
-      if (highCardGame.getHand(0).getNumCards() == 0 && highCardGame.getHand(1).getNumCards() == 0)
+   {     
+     int cardIndex = Integer.parseInt(e.getActionCommand());
+     Hand hand = this.buildGame.getHand(0);
+    
+      if (!selectTopStack && !selectBottomStack)
       {
-         String winLossMessage = myCardTableModel.checkGameResults(highCardGame.getHand(0), highCardGame.getHand(1));
-         myCardTableView.displayTextOnLabel(winLossMessage, myCardTableModel.gameStatusText);
+            myCardTableView.displayTextOnLabel("Select top or bottom\nstack first!", myCardTableModel.gameStatusText); 
       }
-   }
-   
-   private void determineWinningHand()
-   {
-      CardTableModel.HandResult result = myCardTableModel.handResultForHumanCard();
+      else if (myCardTableModel.validPlay(hand.inspectCard(cardIndex), this.selectTopStack, this.selectBottomStack))
+     {
+         // get the tapped card from the human's hand and play it
+         
+         myCardTableModel.lastPlayedHumanCard = this.buildGame.playCard(0, cardIndex);
       
-      // human won, add to the pot
-      if (result == CardTableModel.HandResult.Win)
-      {
-         myCardTableView.displayTextOnLabel("Win", myCardTableModel.gameStatusText);
-         myCardTableModel.cardsHumanHasCaptured.add(myCardTableModel.lastPlayedComputerCard);
-         JLabel wonCard = new JLabel(GUICard.getIcon(myCardTableModel.lastPlayedComputerCard));
-         myCardTableView.displayLabel(myCardTableView.pnlHumanPot, wonCard);
-      } 
-      else if (result == CardTableModel.HandResult.Lose)
-      {
-         myCardTableModel.cardsComputerHasCaptured.add(myCardTableModel.lastPlayedHumanCard);
-         myCardTableView.displayTextOnLabel("Lose", myCardTableModel.gameStatusText);
-      }
+         // add card to the playing area
+            if(selectTopStack && !selectBottomStack)
+            {
+               myCardTableModel.topStack = myCardTableModel.lastPlayedHumanCard;
+               this.reloadPlayArea();
+            }
+      
+            else if(!selectTopStack && selectBottomStack)
+            {
+               myCardTableModel.bottomStack = myCardTableModel.lastPlayedHumanCard;
+               this.reloadPlayArea();
+            }
+            humanPass = false;
+            this.buildGame.takeCard(0);
+            this.reloadHumanHand();
+            this.playComputerHand();
+            
+            if (buildGame.getNumCardsRemainingInDeck() == 0)
+            {
+               myCardTableView.reloadHumansHand();
+               myCardTableView.reloadPassArea();
+               String winLossMessage = myCardTableModel.checkGameResults();
+               myCardTableView.displayTextOnLabel(winLossMessage, myCardTableModel.gameStatusText);
+            }
+            
+     }
       else
       {
-         myCardTableView.displayTextOnLabel("Tie", myCardTableModel.gameStatusText);
+         myCardTableView.displayTextOnLabel("Play is not valid", myCardTableModel.gameStatusText);
+         this.reloadPlayArea();
+         this.reloadHumanHand();
       }
    }
    
    private void playComputerHand()
-   {
-      Hand hand = this.highCardGame.getHand(1);
-      myCardTableModel.lastPlayedComputerCard = this.highCardGame.playCard(1, 0);
+   {  
+     myCardTableView.displayTurnLabelForHuman(false, myCardTableModel.gameStatusText);
+      Hand hand = this.buildGame.getHand(1);
+      
+      for (int j = 0; j < NUM_CARDS_PER_HAND; j++)
+      {
+         Card tempCard = hand.inspectCard(j);
+         int tempInt = GUICard.valueAsInt(tempCard) - GUICard.valueAsInt(myCardTableModel.topStack);
+         
+         if(Math.abs(tempInt) == 1)
+         {
+            myCardTableModel.topStack = this.buildGame.playCard(1, j);
+            computerPass = false;
+            break;
+         }
+         tempInt = GUICard.valueAsInt(tempCard) - GUICard.valueAsInt(myCardTableModel.bottomStack);
+         if(Math.abs(tempInt) == 1)
+         {
+            myCardTableModel.bottomStack = this.buildGame.playCard(1, j);
+            computerPass = false;
+            break;
+         }
+      }
+      if (hand.getNumCards() == NUM_CARDS_PER_HAND)
+      {
+         myCardTableModel.increaseCompPass();
+         computerPass = true;
+         this.myCardTableView.clearScoreboard();
+         this.myCardTableView.updateScoreboard(myCardTableModel.getHumanPass(), myCardTableModel.getCompPass());
+         dealDoublePass();
+      }
+      else
+      {
+         this.buildGame.takeCard(1);
+      }
       
       // add card to view
-      JLabel playedCardLabel = new JLabel(GUICard.getIcon(myCardTableModel.lastPlayedComputerCard));
-      this.myCardTableView.pnlPlayArea.add(playedCardLabel, JLabel.CENTER);
+      this.reloadPlayArea();
       
       // remove all the cards from the computer's hand and reload
       this.myCardTableView.pnlComputerHand.removeAll();
@@ -134,17 +184,25 @@ public class CardTableController implements GameTimerEvent
             myCardTableView.displayLabel(myCardTableView.pnlComputerHand, computerLabel);
          }
       }
+      if (buildGame.getNumCardsRemainingInDeck() == 0)
+      {
+        myCardTableView.reloadHumansHand();
+        myCardTableView.reloadPassArea();
+         String winLossMessage = myCardTableModel.checkGameResults();
+         myCardTableView.displayTextOnLabel(winLossMessage, myCardTableModel.gameStatusText);
+      }
+      myCardTableView.displayTurnLabelForHuman(true, myCardTableModel.gameStatusText);
       
-      this.determineWinningHand();
    }
-    
+   
+   //resets player card icons and loads hand
    public void reloadHumanHand()
    {      
       // remove all the cards from the player's hand, except for the timer
       this.myCardTableView.reloadHumansHand();
 
       // clear out the labels array
-      Hand hand = this.highCardGame.getHand(0);
+      Hand hand = this.buildGame.getHand(0);
       myCardTableModel.humanLabels = new JLabel[hand.getNumCards()];
       
       // re-index the cards onto the view
@@ -182,7 +240,93 @@ public class CardTableController implements GameTimerEvent
       myCardTableView.displayButton(btn1, label);
       return label;
    }
+   
+   public JLabel labelForTopStack(Card card)
+   {
+      JLabel label = new JLabel(GUICard.getIcon(card));
 
+         // add the button
+         JButton btn1 = new JButton("Top");
+
+         btn1.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+               selectTopStack = true;
+               selectBottomStack = false;
+               //handleAction(e);
+            }          
+         });
+
+         myCardTableView.displayButton(btn1, label);
+         return label; 
+   }
+
+   public JLabel labelForBottomStack(Card card)
+   {
+      JLabel label = new JLabel(GUICard.getIcon(card));
+
+         // add the button
+         JButton btn1 = new JButton("Bottom");
+         btn1.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+               selectTopStack = false;
+               selectBottomStack = true;
+              // handleAction(e);
+            }          
+         });
+
+         myCardTableView.displayButton(btn1, label);
+         return label;
+   }
+   
+   //human player skips turn
+   public JLabel humanPass()
+   {
+      JLabel label = new JLabel("Pass");
+
+         // add the button
+         JButton btn1 = new JButton("Pass");
+         btn1.setText("Skip Turn");
+         btn1.setSize(385, 40);
+         btn1.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+               humanPass = true;
+               
+               myCardTableModel.increaseHumanPass();
+               myCardTableView.clearScoreboard();
+                   myCardTableView.updateScoreboard(myCardTableModel.getHumanPass(), myCardTableModel.getCompPass());
+               myCardTableView.reloadPassArea();
+               myCardTableView.pnlPassArea.add(humanPass(), JLabel.CENTER);
+               dealDoublePass();
+               playComputerHand();
+              // handleAction(e);
+            }          
+         });
+
+         label.add(btn1, JLabel.CENTER);
+        // myCardTableView.displayButton(btn1, label);
+         return label;
+   }
+   //checks if both human and cpu pass and then deals fresh card to both stacks
+   public void dealDoublePass()
+   {
+      if(humanPass && computerPass)
+      {
+       this.myCardTableModel.topStack = this.buildGame.getCardFromDeck();    
+       this.myCardTableModel.bottomStack = this.buildGame.getCardFromDeck();
+       reloadPlayArea();
+       this.humanPass = false;
+       this.computerPass = false;
+      } 
+   }
+   
+   public void reloadPlayArea()
+   {
+      selectTopStack = false;
+      selectBottomStack = false;
+      this.myCardTableView.pnlPlayArea.removeAll();
+      this.myCardTableView.pnlPlayArea.add(this.labelForTopStack(myCardTableModel.topStack));
+      this.myCardTableView.pnlPlayArea.add(this.labelForBottomStack(myCardTableModel.bottomStack));   
+   }
    public void gameTimerEventTick(int seconds)
    {
       this.myCardTableView.updateTimerWithValueInSeconds(seconds);

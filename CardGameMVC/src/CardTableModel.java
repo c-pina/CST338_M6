@@ -1,5 +1,3 @@
-import java.util.ArrayList;
-
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
 
@@ -13,6 +11,8 @@ public class CardTableModel
    private int numCardsPerHand = 7;
    private int numPlayers = 2;
    private String title;
+   private int compNumPass = 0;
+   private int humanNumPass = 0;
    
    //ADDED ------------------------------------------------------------------------------------------------------------------
    public JLabel[] computerLabels;
@@ -20,11 +20,10 @@ public class CardTableModel
    public JLabel[] playedCardLabels; 
    public JTextArea[] gameStatusText;
    
-   ArrayList<Card> cardsComputerHasCaptured = new ArrayList<Card>();
-   ArrayList<Card> cardsHumanHasCaptured = new ArrayList<Card>();
-   
    Card lastPlayedHumanCard = null;
    Card lastPlayedComputerCard = null;
+   Card topStack = null;
+   Card bottomStack = null;
       
    CardTableModel(int numCardsPerHand, int numPlayers, String title)
    {
@@ -59,83 +58,68 @@ public class CardTableModel
    }
    
    //ADDED ------------------------------------------------------------------------------------------------------------------
-   public String checkGameResults(Hand firstHand, Hand secondHand)
+   public String checkGameResults()
    {  
       String resultsString = "";
       
-      if (this.cardsHumanHasCaptured.size() > this.cardsComputerHasCaptured.size())
+      if (this.humanNumPass < this.compNumPass)
       {
-         resultsString = "Game Over -- You won\n by capturing " + this.cardsHumanHasCaptured.size()
-            + "\n of the computer's cards!";  
+         resultsString = "Game Over -- You won!!!\nFinal Score:\nHuman " + this.humanNumPass + " to CPU "
+            + this.compNumPass;  
       }
-      else if (this.cardsHumanHasCaptured.size() < this.cardsComputerHasCaptured.size())
+      else if (this.humanNumPass > this.compNumPass)
       {
-         resultsString = "Game Over -- You lost! \n Computer captured " + this.cardsComputerHasCaptured.size()
-            + "\n of your cards!";
+         resultsString = "Game Over -- You Lost.\nFinal Score:\nHuman " + this.humanNumPass + " to CPU "
+             + this.compNumPass;
       }
       else
       {
-         resultsString = "Game over -- Tie Game!";
+         resultsString = "Game over -- Tie Game!\nFinal Score:\nHuman " + this.humanNumPass + " to CPU "
+             + this.compNumPass;
       }
       
       return resultsString;
    }
    
-   public HandResult handResultForHumanCard(/*Card humanCard, Card computerCard*/)
+   
+   public boolean validPlay(Card card, boolean top, boolean bottom)
    {
-      char humanValue = lastPlayedHumanCard.getValue();
-      char computerValue = lastPlayedComputerCard.getValue();
-      
-      // cards are equal, joker ties (only case), otherwise rank wins
-      if (humanValue == computerValue)
+      if (top && !bottom)
       {
-         if (humanValue == 'X')
+         if(Math.abs(GUICard.valueAsInt(card) - GUICard.valueAsInt(topStack)) == 1)
          {
-            return HandResult.Tie;
-         }
-         
-         if (lastPlayedHumanCard.getSuit().getValue() > lastPlayedComputerCard.getSuit().getValue())
-         {
-            return HandResult.Win;
-         }
-         else
-         {
-            return HandResult.Lose;
+            return true;
          }
       }
-      else
+      else if (!top && bottom)
       {
-         // cards aren't equal, joker wins, otherwise card value wins
-         if (humanValue == 'X')
+         if(Math.abs(GUICard.valueAsInt(card) - GUICard.valueAsInt(bottomStack)) == 1)
          {
-            return HandResult.Win;
-         }
-         
-         if (computerValue == 'X')
-         {
-            return HandResult.Lose;
-         }
-         
-         // check for Ace, special case
-         if (humanValue == 'A')
-         {
-            return HandResult.Win; 
-         }
-         
-         if (computerValue == 'A')
-         {
-            return HandResult.Lose; 
-         }
-         
-         // now all others
-         if (humanValue > computerValue)
-         {
-            return HandResult.Win;
-         }
-         else
-         {
-            return HandResult.Lose;
+            return true;
          }
       }
+      return false;
    }
+   
+   //increases value of human passes when called
+   public void increaseHumanPass()
+   {
+     humanNumPass++;   
+   }
+   //increases value of computer passes when called
+   public void increaseCompPass()
+   {
+      compNumPass++;
+   }
+   //return number of computer passes
+   public int getCompPass()
+   {
+     return compNumPass;   
+   }
+   //return number of human passes
+   public int getHumanPass()
+   {
+      return humanNumPass;
+   }
+   
 }
